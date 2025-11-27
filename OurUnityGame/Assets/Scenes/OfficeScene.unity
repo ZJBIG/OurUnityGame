@@ -511,6 +511,11 @@ MonoBehaviour:
   gravityCooldown: 0.8
   teleportParticles: {fileID: 0}
   teleportSound: {fileID: 0}
+  bounceLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  bounceReadyColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  bounceDetectionRange: 2
 --- !u!4 &786553485 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1616004183264706390, guid: d4ee3c255144c4345870cc791921330e, type: 3}

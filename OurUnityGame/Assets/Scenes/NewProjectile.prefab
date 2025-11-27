@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 7512341049006849805}
   m_Layer: 0
   m_Name: NewProjectile
-  m_TagString: Untagged
+  m_TagString: Projectile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -112,7 +112,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!61 &6696114992194933870
 BoxCollider2D:
@@ -143,7 +143,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
   m_Offset: {x: 0, y: 0}
@@ -173,3 +173,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lifespan: 3
   maxBounces: 3
+  canCollideWithPlayer: 0

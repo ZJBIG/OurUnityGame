@@ -58,6 +58,13 @@ public class PlayerAbilities : MonoBehaviour
     public ParticleSystem teleportParticles;
     public AudioClip teleportSound;
 
+    // 投掷物反弹设置
+    [Header("投掷物反弹设置")]
+    public LayerMask bounceLayers; // 可反弹的图层
+    public Color bounceReadyColor = Color.yellow; // 可反弹时的颜色
+    public float bounceDetectionRange = 2f; // 反弹检测范围
+    private bool isBounceReady = false; // 是否可以反弹
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -76,6 +83,7 @@ public class PlayerAbilities : MonoBehaviour
     void Update()
     {
         HandleAbilityInput();
+        CheckBounceOpportunity(); // 持续检测反弹机会
     }
 
     void CreateAimLine()
@@ -118,13 +126,13 @@ public class PlayerAbilities : MonoBehaviour
                 break;
 
             case SceneType.Office:
-                // 新增：在Office场景启用发射功能
                 canShoot = true;
                 canTeleport = true;
                 canTeleportProjectile = true;
                 Debug.Log("已启用：发射物体能力 (鼠标左键)");
                 Debug.Log("已启用：短距传送能力 (鼠标右键瞄准，释放传送)");
                 Debug.Log("已启用：投射物传送能力 (T键)");
+                Debug.Log("已启用：投掷物反弹能力 (R键，黄色提示时可用)");
                 break;
 
             case SceneType.Dream:
@@ -140,6 +148,12 @@ public class PlayerAbilities : MonoBehaviour
         {
             ShootProjectile();
             lastShootTime = Time.time;
+        }
+
+        // 新增：反弹输入（R键触发）
+        if (Input.GetKeyDown(KeyCode.R) && isBounceReady)
+        {
+            ExecuteBounce();
         }
 
         if (canTeleport)
@@ -220,9 +234,8 @@ public class PlayerAbilities : MonoBehaviour
         {
             aimLine.startColor = Color.red;
             aimLine.endColor = Color.red;
-            // 扩展瞄准线以显示碰撞点
             aimLine.positionCount = 3;
-            aimLine.SetPosition(2, targetPos); // 在碰撞点添加一个点
+            aimLine.SetPosition(2, targetPos);
         }
         else
         {
@@ -273,7 +286,6 @@ public class PlayerAbilities : MonoBehaviour
         {
             Debug.Log($"目标点在墙内，尝试调整位置");
             Vector3 adjustedPos = FindNearestValidPosition(playerPos, targetPos);
-            // 如果找到有效位置则更新目标位置，否则取消传送
             if (adjustedPos != playerPos)
             {
                 targetPos = adjustedPos;
@@ -281,7 +293,6 @@ public class PlayerAbilities : MonoBehaviour
             else
             {
                 Debug.LogWarning("找不到有效位置，取消传送");
-                // 重置瞄准状态
                 isAimingTeleport = false;
                 aimLine.enabled = false;
                 return;
@@ -387,6 +398,7 @@ public class PlayerAbilities : MonoBehaviour
         if (currentProjectile != null) return;
 
         Debug.Log("发射物体！");
+
         if (Camera.main == null)
         {
             Debug.LogError("主相机未找到！");
@@ -396,11 +408,19 @@ public class PlayerAbilities : MonoBehaviour
         Vector3 mousePos = GetMouseWorldPosition();
         Vector2 direction = (mousePos - transform.position).normalized;
 
-        currentProjectile = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
+        // 修改：根据鼠标方向生成在人物前方一定距离，而不是固定右侧
+        float spawnDistance = 0.8f; // 生成距离，避免立即碰撞
+        Vector3 spawnPosition = transform.position + (Vector3)(direction * spawnDistance);
+
+        currentProjectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.identity);
+
         Rigidbody2D projRb = currentProjectile.GetComponent<Rigidbody2D>();
         if (projRb != null)
         {
             projRb.velocity = direction * projectileSpeed;
+
+            // 添加：临时忽略与玩家的碰撞
+            StartCoroutine(IgnorePlayerCollisionTemporarily(projRb));
         }
         else
         {
@@ -408,6 +428,27 @@ public class PlayerAbilities : MonoBehaviour
         }
 
         Destroy(currentProjectile, 3f);
+    }
+
+    // 新增：临时忽略与玩家的碰撞
+    private IEnumerator IgnorePlayerCollisionTemporarily(Rigidbody2D projRb)
+    {
+        if (projRb == null) yield break;
+
+        Collider2D playerCollider = GetComponent<Collider2D>();
+        Collider2D projectileCollider = projRb.GetComponent<Collider2D>();
+
+        if (playerCollider != null && projectileCollider != null)
+        {
+            // 忽略碰撞
+            Physics2D.IgnoreCollision(playerCollider, projectileCollider, true);
+
+            // 0.5秒后恢复碰撞
+            yield return new WaitForSeconds(0.5f);
+
+            Physics2D.IgnoreCollision(playerCollider, projectileCollider, false);
+            Debug.Log("恢复投掷物与玩家的碰撞");
+        }
     }
 
     void ReverseGravity()
@@ -523,5 +564,124 @@ public class PlayerAbilities : MonoBehaviour
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(targetPos, 0.3f);
         }
+
+        // 新增：显示反弹检测范围
+        if (currentProjectile != null)
+        {
+            Gizmos.color = isBounceReady ? Color.yellow : Color.gray;
+            Gizmos.DrawWireSphere(currentProjectile.transform.position, bounceDetectionRange);
+        }
+    }
+
+    // 新增方法：检测反弹机会
+    void CheckBounceOpportunity()
+    {
+        if (currentProjectile == null)
+        {
+            isBounceReady = false;
+            return;
+        }
+
+        // 检测投掷物周围是否有可反弹的表面
+        Collider2D[] bounceTargets = Physics2D.OverlapCircleAll(
+            currentProjectile.transform.position,
+            bounceDetectionRange,
+            bounceLayers
+        );
+
+        isBounceReady = bounceTargets.Length > 0;
+
+        // 更新投掷物颜色提示
+        UpdateProjectileColor();
+    }
+
+    // 新增方法：更新投掷物颜色
+    // 在 UpdateProjectileColor 方法中修改颜色逻辑
+    void UpdateProjectileColor()
+    {
+        if (currentProjectile == null) return;
+
+        ProjectileBehavior projBehavior = currentProjectile.GetComponent<ProjectileBehavior>();
+        SpriteRenderer projRenderer = currentProjectile.GetComponent<SpriteRenderer>();
+
+        if (projRenderer != null && projBehavior != null)
+        {
+            // 根据反弹状态显示不同颜色
+            if (projBehavior.canCollideWithPlayer)
+            {
+                projRenderer.color = Color.green; // 可接取
+            }
+            else if (projBehavior.bounceCount > 0)
+            {
+                projRenderer.color = Color.yellow; // 已反弹但还不够
+            }
+            else
+            {
+                projRenderer.color = Color.white; // 尚未反弹
+            }
+        }
+    }
+
+    // 新增方法：执行反弹
+    void ExecuteBounce()
+    {
+        if (!isBounceReady || currentProjectile == null) return;
+
+        Rigidbody2D projRb = currentProjectile.GetComponent<Rigidbody2D>();
+        if (projRb == null) return;
+
+        // 找到最近的反弹表面
+        Collider2D[] bounceTargets = Physics2D.OverlapCircleAll(
+            currentProjectile.transform.position,
+            bounceDetectionRange,
+            bounceLayers
+        );
+
+        if (bounceTargets.Length > 0)
+        {
+            Vector2 closestSurface = FindClosestBounceSurface(bounceTargets);
+            Vector2 incomingDirection = projRb.velocity.normalized;
+            Vector2 surfaceNormal = (closestSurface - (Vector2)currentProjectile.transform.position).normalized;
+
+            // 计算反射方向
+            Vector2 bounceDirection = Vector2.Reflect(incomingDirection, surfaceNormal);
+
+            // 应用新的速度
+            projRb.velocity = bounceDirection * projectileSpeed;
+
+            Debug.Log("投掷物反弹！新方向: " + bounceDirection);
+
+            // 反弹后的冷却
+            StartCoroutine(BounceCooldown());
+        }
+    }
+
+    // 新增方法：找到最近的反弹表面
+    Vector2 FindClosestBounceSurface(Collider2D[] surfaces)
+    {
+        Vector2 projectilePos = currentProjectile.transform.position;
+        float closestDistance = float.MaxValue;
+        Vector2 closestPoint = projectilePos;
+
+        foreach (Collider2D surface in surfaces)
+        {
+            Vector2 surfacePoint = surface.ClosestPoint(projectilePos);
+            float distance = Vector2.Distance(projectilePos, surfacePoint);
+
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestPoint = surfacePoint;
+            }
+        }
+
+        return closestPoint;
+    }
+
+    // 新增协程：反弹冷却
+    private IEnumerator BounceCooldown()
+    {
+        isBounceReady = false;
+        yield return new WaitForSeconds(0.5f); // 短暂冷却防止连续反弹
     }
 }
