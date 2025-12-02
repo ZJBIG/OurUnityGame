@@ -14,9 +14,9 @@ public class PlayerCtrl : MonoBehaviour
     public float DashImpulse;
     public Vector2 WallSlideForce;
     public Vector2 WallJumpImpulse;
-    private Vector2 Direction;
-    private bool inSky, canDash;
-    private float LockMoveTime;
+    [HideInInspector] public Vector2 Direction;
+    [HideInInspector] public bool inSky, canDash;
+    [HideInInspector] public float LockMoveTime;
     Rigidbody2D rb;
     void Start()
     {
