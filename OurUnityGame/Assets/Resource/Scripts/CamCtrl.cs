@@ -12,7 +12,7 @@ public class CamCtrl : MonoBehaviour
     }
     void Update()
     {
-        Transform player = GameObject.Find("Player").transform;
+        Transform player = GameObject.FindWithTag("Player").transform;
         Vector3 pos = new Vector3(player.position.x, player.position.y, transform.position.z);
         transform.position = new Vector3(player.position.x, player.position.y, pos.z);
     }

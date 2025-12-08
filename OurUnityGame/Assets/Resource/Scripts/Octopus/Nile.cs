@@ -1,20 +1,25 @@
 using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class Nile : MonoBehaviour
 {
     Animator ani;
-    public float HurtSpeed;//使章鱼受伤所需要的竖直速度;
+    [Header("使章鱼受伤所需要的竖直速度")]
+    public float HurtSpeed;
+    [Header("每次的受伤时间")]
     public float HurtTime;
-    [HideInInspector] public bool isHurt;
+    private bool Hurt
+    {
+        get => transform.parent.GetChild(0).GetComponent<Octopus>().isHurt;
+        set => transform.parent.GetChild(0).GetComponent<Octopus>().isHurt = value;
+    }
     void Start()
     {
-        ani = transform.parent.GetComponent<Animator>();
+        ani = transform.parent.GetChild(0).GetComponent<Animator>();
     }
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Player"))
+        if (collision.CompareTag("Player") && !Hurt)
         {
             var rb = collision.GetComponent<Rigidbody2D>();
             if (rb.velocity.y <= -HurtSpeed)
@@ -26,10 +31,10 @@ public class Nile : MonoBehaviour
     }
     IEnumerator BeingHurt()
     {
-        isHurt = true;
+        Hurt = true;
         ani.SetInteger("Status", 1);
-        yield return new WaitForSeconds(HurtTime);
+        yield return new WaitForSecondsRealtime(HurtTime);
         ani.SetInteger("Status", 0);
-        isHurt = false;
+        Hurt = false;
     }
 }
