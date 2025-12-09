@@ -7,31 +7,48 @@ public class PlayerCtrl : MonoBehaviour
     [Header("冲刺/蹬墙后锁定水平移动时间")]
     public float LockHorizontalMoveTime;
     [Header("普通跳跃参数")]
-    public float JumpForce;
+    public float JumpImpulse;
     public float MaxJumpTime; private float CurJumpTime;
     public float WolfTime; private float EscapeGroundTime;
     [Header("基本设置")]
     public float MoveSpeed;
     public float DashImpulse;
+    public float DashCD;
     public Vector2 WallSlideForce;
     public Vector2 WallJumpImpulse;
     [HideInInspector] public Vector2 Direction;
-    [HideInInspector] public bool inSky, canDash;
+    [HideInInspector] public bool inSky, canDash = true;
+    [HideInInspector] public bool onDashing;
     [HideInInspector] public float LockMoveTime;
     Rigidbody2D rb;
+    Collider2D Collider;
+
+    Vector2 RightColliderOffset = new Vector2(-0.0612676f, -0.3259298f);
+    Vector2 LeftColliderOffset = new Vector2(0.05240458f, -0.3259298f);
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        Collider = GetComponent<Collider2D>();
+    }
+    private void FixedUpdate()
+    {
+        if (WallDetect() && inSky && !(rb.velocity.y >= erf))
+            rb.AddForce(WallSlideForce);
     }
     void Update()
     {
         UpdateFaceDirection();
+
+        if (Direction == Vector2.right)
+            Collider.offset = RightColliderOffset;
+        if (Direction == Vector2.left)
+            Collider.offset = LeftColliderOffset;
+
         LockMoveTime -= Time.deltaTime;
         if (GroundDetect() && LockMoveTime <= 0f)
         {
             CurJumpTime = 0f;
             inSky = false;
-            canDash = true;
             EscapeGroundTime = 0f;
         }
         if (!GroundDetect())
@@ -40,10 +57,7 @@ public class PlayerCtrl : MonoBehaviour
             if (EscapeGroundTime >= WolfTime)
                 inSky = true;
         }
-        if (WallDetect() && inSky && !(rb.velocity.y >= erf))
-        {
-            rb.AddForce(WallSlideForce);
-        }
+
         HorizontalMove();
         Jump();
         StartCoroutine(WallJump());
@@ -67,7 +81,7 @@ public class PlayerCtrl : MonoBehaviour
             return; // 在重力反转模式下不执行跳跃
         if (Input.GetKey(KeyCode.Space) && CurJumpTime <= MaxJumpTime && !inSky)
         {
-            rb.AddForce(Vector2.up * JumpForce, ForceMode2D.Force);
+            rb.AddForce(Vector2.up * JumpImpulse, ForceMode2D.Impulse);
             CurJumpTime += Time.deltaTime;
         }
         if (!Input.GetKey(KeyCode.Space) && CurJumpTime >= erf)
@@ -78,17 +92,22 @@ public class PlayerCtrl : MonoBehaviour
         if (!canDash || LockMoveTime > 0) yield break;
         if (Input.GetKeyDown(KeyCode.LeftShift))
         {
+            onDashing = true;
             Vector2 dir = rb.velocity.normalized;
             if (dir.magnitude <= erf) dir = Direction;
             rb.AddForce(new Vector2(dir.x, dir.y / 2.0f) * DashImpulse, ForceMode2D.Impulse);
             canDash = false;
+
             LockMoveTime = LockHorizontalMoveTime;
+
+            yield return new WaitForSecondsRealtime(LockHorizontalMoveTime);
+            onDashing = false;
+
+            yield return new WaitForSecondsRealtime(DashCD - LockHorizontalMoveTime);
+            while (!GroundDetect())
+                yield return null;
+            canDash = true;
         }
-    }
-    public void ResetDash()
-    {
-        canDash = true;
-        Debug.Log("冲刺已重置");
     }
     private IEnumerator WallJump()
     {
@@ -96,7 +115,6 @@ public class PlayerCtrl : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space) && inSky && WallDetect())
         {
             rb.AddForce(new Vector2(-WallJumpImpulse.x * Direction.x, WallJumpImpulse.y), ForceMode2D.Impulse);
-            yield return new WaitForSecondsRealtime(LockHorizontalMoveTime);
             LockMoveTime = LockHorizontalMoveTime;
         }
     }

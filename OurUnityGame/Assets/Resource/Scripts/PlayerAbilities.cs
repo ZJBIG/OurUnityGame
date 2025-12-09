@@ -444,7 +444,7 @@ public class PlayerAbilities : MonoBehaviour
             Physics2D.IgnoreCollision(playerCollider, projectileCollider, true);
 
             // 0.5秒后恢复碰撞
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSecondsRealtime(0.5f);
 
             Physics2D.IgnoreCollision(playerCollider, projectileCollider, false);
             Debug.Log("恢复投掷物与玩家的碰撞");

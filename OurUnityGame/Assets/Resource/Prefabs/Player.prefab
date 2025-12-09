@@ -195,16 +195,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LockHorizontalMoveTime: 0.8
-  JumpForce: 2
+  JumpImpulse: 0.015
   MaxJumpTime: 0.2
   WolfTime: 0.5
   MoveSpeed: 2
   DashImpulse: 6
-  WallSlideForce: {x: 0, y: 0.3}
-  WallJumpImpulse: {x: 6, y: 3}
+  DashCD: 5
+  WallSlideForce: {x: 0, y: 2}
+  WallJumpImpulse: {x: 4, y: 3}
   Direction: {x: 0, y: 0}
   inSky: 0
-  canDash: 0
+  canDash: 1
+  onDashing: 0
   LockMoveTime: 0
 --- !u!114 &8556736493533067777
 MonoBehaviour:
@@ -218,3 +220,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f91c00d54a66874f92ddab7cd6f0be9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentState: 0

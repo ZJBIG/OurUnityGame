@@ -22,7 +22,7 @@ public class PlayerAnimation : MonoBehaviour
     private PlayerCtrl playerCtrl;
     private PlayerAbilities playerAbilities;
 
-    public AnimationState currentState;
+    [HideInInspector] public AnimationState currentState;
     private readonly Dictionary<AnimationState, string> stateToTrigger = new Dictionary<AnimationState, string>();
 
     void Start()
@@ -64,15 +64,15 @@ public class PlayerAnimation : MonoBehaviour
     {
         //if (!playerAbilities.teleportCooldown)
         //    return AnimationState.Flash;
-        if (!playerCtrl.canDash)
+        if (playerCtrl.WallDetect() && playerCtrl.inSky)
+            return AnimationState.DownWall;
+        if (playerCtrl.onDashing)
             return AnimationState.Dash;
         //if (playerAbilities.shootCooldown != 0)
         //    return AnimationState.Through;
-        if (playerCtrl.WallDetect() && playerCtrl.inSky)
-            return AnimationState.DownWall;
         if (playerCtrl.inSky)
             return AnimationState.Jump;
-        if (rb.velocity.magnitude >= 0.01f)
+        if (rb.velocity.magnitude >= 0.1f)
             return AnimationState.Run;
         return AnimationState.Idle;
     }
